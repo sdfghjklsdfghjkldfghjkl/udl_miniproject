@@ -4,18 +4,6 @@ import torchvision
 from torchvision import transforms
 import random
 
-def _extract_class_specific_idx(dataset, target_classes):
-    """
-    dataset: torchvision.datasets.MNIST
-    target_classes: list
-    """
-    dataset.targets = torch.tensor(dataset.targets)
-    idx = torch.zeros_like(dataset.targets, dtype=torch.bool)
-    for target in target_classes:
-        idx = idx | (dataset.targets==target)
-    
-    return idx
-
 
 def SplitMnistDataloader(class_distribution, batch_size=256, not_mnist=False, seed=0):
     """
@@ -40,13 +28,13 @@ def SplitMnistDataloader(class_distribution, batch_size=256, not_mnist=False, se
     dataloaders = []
 
     for classes in class_distribution:
-        train_idx = _extract_class_specific_idx(trainset, classes)
+        train_idx = _get_class_idx(trainset, classes)
         train_idx = torch.where(train_idx)[0]
         sub_train_sampler = torch.utils.data.SubsetRandomSampler(train_idx)
         sub_train_loader = torch.utils.data.DataLoader(
             trainset, batch_size=batch_size, sampler=sub_train_sampler)
 
-        test_idx = _extract_class_specific_idx(testset, classes)
+        test_idx = _get_class_idx(testset, classes)
         test_idx = torch.where(test_idx)[0]
         sub_test_sampler = torch.utils.data.SubsetRandomSampler(test_idx)
         sub_test_loader = torch.utils.data.DataLoader(
@@ -81,7 +69,7 @@ def SplitCifar10Dataloader(class_distribution, batch_size=256, grayscale=True, d
     dataloaders = []
 
     for classes in class_distribution:
-        train_idx = _extract_class_specific_idx(trainset, classes)
+        train_idx = _get_class_idx(trainset, classes)
         train_idx = torch.where(train_idx)[0]
 
         # Select a subset of indices
@@ -93,7 +81,7 @@ def SplitCifar10Dataloader(class_distribution, batch_size=256, grayscale=True, d
             trainset, batch_size=batch_size, sampler=sub_train_sampler)
         
                 # Test subset
-        test_idx = _extract_class_specific_idx(testset, classes)
+        test_idx = _get_class_idx(testset, classes)
         test_idx = torch.where(test_idx)[0]
         # Select a subset of indices
         subset_size_test = int(len(test_idx) * data_subset)
@@ -126,7 +114,7 @@ def mini_SplitMnistDataloader(class_distribution, batch_size=256, subset_percent
 
     for classes in class_distribution:
         # Train subset
-        train_idx = _extract_class_specific_idx(trainset, classes)
+        train_idx = _get_class_idx(trainset, classes)
         train_idx = torch.where(train_idx)[0]
         # Select a subset of indices
         subset_size_train = int(len(train_idx) * subset_percentage)
@@ -137,7 +125,7 @@ def mini_SplitMnistDataloader(class_distribution, batch_size=256, subset_percent
             trainset, batch_size=batch_size, sampler=sub_train_sampler)
 
         # Test subset
-        test_idx = _extract_class_specific_idx(testset, classes)
+        test_idx = _get_class_idx(testset, classes)
         test_idx = torch.where(test_idx)[0]
         # Select a subset of indices
         subset_size_test = int(len(test_idx) * subset_percentage)
@@ -152,3 +140,14 @@ def mini_SplitMnistDataloader(class_distribution, batch_size=256, subset_percent
     return dataloaders
 
 
+def _get_class_idx(dataset, target_classes):
+    """
+    dataset: torchvision.datasets.MNIST
+    target_classes: list
+    """
+    dataset.targets = torch.tensor(dataset.targets)
+    idx = torch.zeros_like(dataset.targets, dtype=torch.bool)
+    for target in target_classes:
+        idx = idx | (dataset.targets==target)
+    
+    return idx
